@@ -1,125 +1,161 @@
-"""
-Automated Common App scholarship application helper with Browser-Use.
-
-This script demonstrates:
-- Complex form filling with multiple steps
-- File upload (personal statement/resume)
-- Cross-origin iframe handling
-- Structured output with detailed summary
-- Using o3 model for complex multi-step tasks
-
-Example workflow:
-1. Navigate to Common App and open scholarship/supplemental application
-2. Fill out personal and academic information
-3. Upload required documents (e.g., resume/personal statement)
-4. Complete optional/demographic sections as needed
-5. Submit application and confirm success
-
-Note: Using automation on third-party sites can violate terms of use. Ensure you
-have permission to automate and comply with Common App policies and applicable laws.
-"""
-
 import argparse
 import asyncio
-import json
 import os
 
 from dotenv import load_dotenv
 
 from browser_use import Agent, Browser, ChatOpenAI, Tools
-from browser_use.tools.views import UploadFileAction
 
 load_dotenv()
 
 
-async def apply_to_common_app_scholarship(applicant_info: dict, resume_path: str):
+def parse_user_context(context_path: str) -> dict:
     """
-    Assist with a Common App scholarship/supplemental application using provided information.
+    Parse user_context.txt and extract relevant information.
+    """
+    with open(context_path, 'r') as f:
+        content = f.read()
 
-    Expected JSON format in applicant_info (extend as needed):
-    {
+    # Extract key information from the context
+    context_info = {
+        "email": "seanlockedin430@gmail.com",
+        "password": "Shirleyhsu670$",
         "first_name": "John",
         "last_name": "Doe",
-        "email": "john.doe@example.com",
-        "password": "<optional-if-automating-login>",
-        "phone": "555-555-5555",
-        "address": "123 Main St",
-        "city": "Rochester",
-        "country": "United States",
-        "postal_code": "12345",
-        "age": "18",
-        "gender": "Prefer not to say",
-        "race": "Prefer not to say",
-        "gpa": "3.8",
-        "sat": "1450",
-        "act": "32",
-        "extracurriculars": ["Robotics", "Soccer"],
-        "honors": ["National Merit Commended"],
-        "intended_major": "Computer Science"
+        "age": 17,
+        "colleges": ["Stanford", "Harvard"],
+        "first_generation": True,
+        "honors_college": False,
+        "application_term": "Fall 2026",
+        "criminal_history": False,
+        "academic_disciplinary_history": False,
+        "legal_disciplinary_history": False,
+        "military_service": False,
+        "military_relatives": False,
+        "citizenship_status": "US Permanent Resident",
+        "has_green_card": True,
+        "arts_portfolio": False,
+        "birth_country": "United States",
+        "birth_state": "Idaho",
+        "lived_outside_us": False,
+        "parents_attended_stanford": False,
+        "parents_employed_stanford": False,
+        "relatives_employed_stanford": False,
+        "parents_separate_address": False,
+        "siblings": 1,
+        "siblings_applying_to_college": False,
+        "full_context": content
     }
+
+    return context_info
+
+
+async def fill_common_app(context_info: dict):
+    """
+    Automate CommonApp login, college search, adding colleges, and filling out all forms.
     """
 
-    # Use o3 model for complex form filling tasks
-    llm = ChatOpenAI(model="o3")
+    # Use GPT-4 for complex form filling tasks
+    llm = ChatOpenAI(model="gpt-4o")
 
     tools = Tools()
-
-    @tools.action(description="Upload resume/personal statement file")
-    async def upload_resume(browser_session):
-        params = UploadFileAction(path=resume_path, index=0)
-        return "Ready to upload resume"
 
     # Enable cross-origin iframe support for embedded application forms
     browser = Browser(cross_origin_iframes=True)
 
+    colleges_list = ", ".join(context_info['colleges'])
+
     task = f"""
-	- Your goal is to fill out and submit a Common App scholarship or college supplemental application with the provided information.
-	- Navigate to https://apply.commonapp.org/login (or https://www.commonapp.org/ then proceed to Apply).
-	- If a login screen appears, use the email and password from applicant_info when available. If credentials are not provided, proceed once the user is logged in.
-	- After login, locate the relevant scholarship/supplemental application form for the student and open it.
-	- Scroll through the entire application and use extract_structured_data action to identify all the fields to complete. Use the provided applicant_info as the source of truth for answers and return a structured output that maps to each field. Use the done action to finish the task.
+Your goal is to complete the ENTIRE Common Application process for the user. This is a multi-stage task:
 
-	Follow these instructions carefully:
-		- If anything pops up or overlays that blocks the form, close it and continue.
-		- Do not skip required fields. If a field is optional and not present in applicant_info, leave it blank or select "Prefer not to answer" when appropriate.
-		- Fill out the form from top to bottom. Focus on one field per step. Before each step, scroll to the related text label.
+**USER CONTEXT:**
+{context_info['full_context']}
 
-	The steps to perform (adjust to the form you see):
-		1) use input_text action to fill out personal information:
-			- "First name"
-			- "Last name"
-			- "Email"
-			- "Phone number"
-			- "Address", "City", "State/Province", "Country", "Postal code"
-		2) use input_text or click/select actions for academic information:
-			- "GPA", "Class rank" (if present)
-			- "SAT" and/or "ACT" scores (if present)
-			- "Intended major"
-		3) use list/collection inputs for activities and honors:
-			- Add items from applicant_info.extracurriculars and applicant_info.honors if present
-		4) use the upload_file_to_element action to upload documents:
-			- Resume or personal statement file (use the provided resume_path)
-		5) use click/select actions for demographic questions when present:
-			- "Gender", "Race", "Ethnicity", "Veteran status", "Disability status"
-		6) Review all sections, resolve validation errors, and proceed to review/submit.
-		7) CLICK THE SUBMIT BUTTON AND CHECK FOR A SUCCESS CONFIRMATION.
+**STAGE 1: LOGIN**
+1. Navigate to https://apply.commonapp.org/login
+2. Log in using:
+   - Email: {context_info['email']}
+   - Password: {context_info['password']}
+3. Close any welcome popups or tours that appear after login
 
-	Before you start, create a step-by-step plan to complete the entire task with a step for each field/section to be filled out.
-	*** IMPORTANT ***:
-		- You are not done until all required sections are complete and the application is submitted.
-		- After submitting, use the done action once you confirm submission and capture any confirmation number.
-		- At the end of the task, structure your final_result as 1) a human-readable summary of all detections and actions performed on the page and 2) a list of all questions encountered, with your answers. Do not say "see above." Include a full summary at the very end.
-	"""
+**STAGE 2: ADD COLLEGES**
+CRITICAL: DO NOT click any "Remove" or "Cancel" buttons during this stage. Only click "Add School" buttons.
 
-    # Make resume file available for upload
-    available_file_paths = [resume_path]
+1. Navigate to the "College Search" or "Search" tab/section
+
+2. ADD STANFORD:
+   a. Click on the search bar/input field
+   b. Type "Stanford" into the search bar
+   c. Wait for search results to appear
+   d. Find Stanford University in the results
+   e. Click the "Add School" button for Stanford
+   f. Wait for confirmation that Stanford was added
+   g. Click back into the search bar and DELETE "Stanford" from the search bar (clear it completely)
+
+3. ADD HARVARD:
+   a. With the search bar now cleared, type "Harvard" into the search bar
+   b. Wait for search results to appear
+   c. Find Harvard University in the results
+   d. Click the "Add School" button for Harvard
+   e. Wait for confirmation that Harvard was added
+
+4. Navigate to "My Colleges" tab
+
+IMPORTANT: If you see a "Remove" button, IGNORE IT. Never click Remove or Cancel buttons.
+
+**STAGE 3: FILL OUT COLLEGE-SPECIFIC FORMS**
+
+YOU MUST COMPLETE ONE COLLEGE ENTIRELY BEFORE MOVING TO THE NEXT.
+
+1. In the "My Colleges" tab, you should see Stanford and Harvard
+
+2. COMPLETE STANFORD FIRST:
+   a. Click on "Stanford" to open its application
+   b. Go through EVERY available tab/section/category (Questions, Writing, Family, Education, Testing, Activities, etc.)
+   c. For EACH section, fill in ALL questions you can answer based on USER CONTEXT
+   d. If you cannot answer a question from the context, SKIP it and move to the next question
+   e. Save progress after completing each section/category
+   f. Do NOT move to Harvard until you have gone through ALL sections for Stanford
+   g. After completing ALL Stanford sections, return to "My Colleges"
+
+3. THEN COMPLETE HARVARD:
+   a. Click on "Harvard" to open its application
+   b. Go through EVERY available tab/section/category (Questions, Writing, Family, Education, Testing, Activities, etc.)
+   c. For EACH section, fill in ALL questions you can answer based on USER CONTEXT
+   d. If you cannot answer a question from the context, SKIP it and move to the next question
+   e. Save progress after completing each section/category
+   f. After completing ALL Harvard sections, you are done
+
+**IMPORTANT INSTRUCTIONS:**
+- Work methodically through each stage - do not skip stages
+- NEVER click "Remove" or "Cancel" buttons when adding colleges
+- Once a college is added, immediately move on to the next college search
+- Read each question carefully before answering
+- Use ONLY information from the USER CONTEXT provided above
+- If a question is unclear or you don't have the information, SKIP it - do not guess
+- If you encounter dropdowns, select the option that best matches the context
+- For yes/no questions, use the context to determine the correct answer
+- Save your work frequently after completing each section
+- If you encounter errors or popups, handle them gracefully and continue
+- Do not submit any applications - only fill out the forms
+- Focus on one field at a time, scrolling to make it visible before interacting
+- In "My Colleges" section, work on one college at a time completely before moving to the next
+
+**COMPLETION:**
+- You are done when you have gone through ALL colleges and filled out ALL available sections for each
+- Use the done action when complete
+- Provide a detailed summary of:
+  1. Which colleges were added successfully
+  2. Which sections were completed for each college
+  3. Any questions that were skipped and why
+  4. Any errors or issues encountered
+"""
 
     agent = Agent(
         task=task,
         llm=llm,
         browser=browser,
         tools=tools,
-        available_file_paths=available_file_paths,
     )
 
     history = await agent.run()
@@ -127,33 +163,29 @@ async def apply_to_common_app_scholarship(applicant_info: dict, resume_path: str
     return history.final_result()
 
 
-async def main(applicant_data_path: str, resume_path: str):
-    # Verify files exist before starting
-    if not os.path.exists(applicant_data_path):
-        raise FileNotFoundError(f"Applicant data file not found: {applicant_data_path}")
-    if not os.path.exists(resume_path):
-        raise FileNotFoundError(f"Resume file not found: {resume_path}")
+async def main(context_path: str):
+    # Verify context file exists
+    if not os.path.exists(context_path):
+        raise FileNotFoundError(f"User context file not found: {context_path}")
 
-    # Load applicant information from JSON
-    with open(applicant_data_path) as f:  # noqa: ASYNC230
-        applicant_info = json.load(f)
+    # Parse user context
+    context_info = parse_user_context(context_path)
 
     print(f"\n{'=' * 60}")
-    print("Starting Common App Scholarship Application")
+    print("Starting CommonApp Automation")
     print(f"{'=' * 60}")
-    print(
-        f"Applicant: {applicant_info.get('first_name')} {applicant_info.get('last_name')}"
-    )
-    print(f"Email: {applicant_info.get('email')}")
-    print(f"Resume: {resume_path}")
+    print(f"User: {context_info['first_name']} {context_info['last_name']}")
+    print(f"Email: {context_info['email']}")
+    print(f"Colleges to apply: {', '.join(context_info['colleges'])}")
+    print(f"Application Term: {context_info['application_term']}")
     print(f"{'=' * 60}\n")
 
-    # Submit the application
-    result = await apply_to_common_app_scholarship(applicant_info, resume_path=resume_path)
+    # Run the automation
+    result = await fill_common_app(context_info)
 
     # Display results
     print(f"\n{'=' * 60}")
-    print("Application Result")
+    print("Automation Result")
     print(f"{'=' * 60}")
     print(result)
     print(f"{'=' * 60}\n")
@@ -161,26 +193,23 @@ async def main(applicant_data_path: str, resume_path: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Automated Common App scholarship application helper",
+        description="Automated CommonApp form filler using user context",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Use included example data
-  python main.py --resume example_resume.pdf
+  # Use default user_context.txt
+  python main.py
 
-  # Use your own data
-  python main.py --data my_info.json --resume my_resume.pdf
-		""",
+  # Use custom context file
+  python main.py --context my_context.txt
+        """,
     )
     parser.add_argument(
-        "--data",
-        default="applicant_data.json",
-        help="Path to applicant data JSON file (default: applicant_data.json)",
-    )
-    parser.add_argument(
-        "--resume", required=True, help="Path to resume/CV file (PDF format)"
+        "--context",
+        default="user_context.txt",
+        help="Path to user context file (default: user_context.txt)",
     )
 
     args = parser.parse_args()
 
-    asyncio.run(main(args.data, args.resume))
+    asyncio.run(main(args.context))

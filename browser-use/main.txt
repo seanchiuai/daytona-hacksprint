@@ -1,0 +1,166 @@
+
+import argparse
+import asyncio
+import json
+import os
+
+from dotenv import load_dotenv
+
+from browser_use import Agent, Browser, ChatOpenAI, Tools
+from browser_use.tools.views import UploadFileAction
+
+load_dotenv()
+
+
+async def apply_to_common_app_scholarship(applicant_info: dict, resume_path: str):
+    """
+    Assist with a Common App scholarship/supplemental application using provided information.
+
+    Expected JSON format in applicant_info (extend as needed):
+    {
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john.doe@example.com",
+        "password": "<optional-if-automating-login>",
+        "phone": "555-555-5555",
+        "address": "123 Main St",
+        "city": "Rochester",
+        "country": "United States",
+        "postal_code": "12345",
+        "age": "18",
+        "gender": "Prefer not to say",
+        "race": "Prefer not to say",
+        "gpa": "3.8",
+        "sat": "1450",
+        "act": "32",
+        "extracurriculars": ["Robotics", "Soccer"],
+        "honors": ["National Merit Commended"],
+        "intended_major": "Computer Science"
+    }
+    """
+
+    # Use o3 model for complex form filling tasks
+    llm = ChatOpenAI(model="o3")
+
+    tools = Tools()
+
+    @tools.action(description="Upload resume/personal statement file")
+    async def upload_resume(browser_session):
+        params = UploadFileAction(path=resume_path, index=0)
+        return "Ready to upload resume"
+
+    # Enable cross-origin iframe support for embedded application forms
+    browser = Browser(cross_origin_iframes=True)
+
+    task = f"""
+	- Your goal is to fill out and submit a Common App scholarship or college supplemental application with the provided information.
+	- Navigate to https://apply.commonapp.org/login (or https://www.commonapp.org/ then proceed to Apply).
+	- If a login screen appears, use the email and password from applicant_info when available. If credentials are not provided, proceed once the user is logged in.
+	- After login, locate the relevant scholarship/supplemental application form for the student and open it.
+	- Scroll through the entire application and use extract_structured_data action to identify all the fields to complete. Use the provided applicant_info as the source of truth for answers and return a structured output that maps to each field. Use the done action to finish the task.
+
+	Follow these instructions carefully:
+		- If anything pops up or overlays that blocks the form, close it and continue.
+		- Do not skip required fields. If a field is optional and not present in applicant_info, leave it blank or select "Prefer not to answer" when appropriate.
+		- Fill out the form from top to bottom. Focus on one field per step. Before each step, scroll to the related text label.
+
+	The steps to perform (adjust to the form you see):
+		1) use input_text action to fill out personal information:
+			- "First name"
+			- "Last name"
+			- "Email"
+			- "Phone number"
+			- "Address", "City", "State/Province", "Country", "Postal code"
+		2) use input_text or click/select actions for academic information:
+			- "GPA", "Class rank" (if present)
+			- "SAT" and/or "ACT" scores (if present)
+			- "Intended major"
+		3) use list/collection inputs for activities and honors:
+			- Add items from applicant_info.extracurriculars and applicant_info.honors if present
+		4) use the upload_file_to_element action to upload documents:
+			- Resume or personal statement file (use the provided resume_path)
+		5) use click/select actions for demographic questions when present:
+			- "Gender", "Race", "Ethnicity", "Veteran status", "Disability status"
+		6) Review all sections, resolve validation errors, and proceed to review/submit.
+		7) CLICK THE SUBMIT BUTTON AND CHECK FOR A SUCCESS CONFIRMATION.
+
+	Before you start, create a step-by-step plan to complete the entire task with a step for each field/section to be filled out.
+	*** IMPORTANT ***:
+		- You are not done until all required sections are complete and the application is submitted.
+		- After submitting, use the done action once you confirm submission and capture any confirmation number.
+		- At the end of the task, structure your final_result as 1) a human-readable summary of all detections and actions performed on the page and 2) a list of all questions encountered, with your answers. Do not say "see above." Include a full summary at the very end.
+	"""
+
+    # Make resume file available for upload
+    available_file_paths = [resume_path]
+
+    agent = Agent(
+        task=task,
+        llm=llm,
+        browser=browser,
+        tools=tools,
+        available_file_paths=available_file_paths,
+    )
+
+    history = await agent.run()
+
+    return history.final_result()
+
+
+async def main(applicant_data_path: str, resume_path: str):
+    # Verify files exist before starting
+    if not os.path.exists(applicant_data_path):
+        raise FileNotFoundError(f"Applicant data file not found: {applicant_data_path}")
+    if not os.path.exists(resume_path):
+        raise FileNotFoundError(f"Resume file not found: {resume_path}")
+
+    # Load applicant information from JSON
+    with open(applicant_data_path) as f:  # noqa: ASYNC230
+        applicant_info = json.load(f)
+
+    print(f"\n{'=' * 60}")
+    print("Starting Common App Scholarship Application")
+    print(f"{'=' * 60}")
+    print(
+        f"Applicant: {applicant_info.get('first_name')} {applicant_info.get('last_name')}"
+    )
+    print(f"Email: {applicant_info.get('email')}")
+    print(f"Resume: {resume_path}")
+    print(f"{'=' * 60}\n")
+
+    # Submit the application
+    result = await apply_to_common_app_scholarship(applicant_info, resume_path=resume_path)
+
+    # Display results
+    print(f"\n{'=' * 60}")
+    print("Application Result")
+    print(f"{'=' * 60}")
+    print(result)
+    print(f"{'=' * 60}\n")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Automated Common App scholarship application helper",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Use included example data
+  python main.py --resume example_resume.pdf
+
+  # Use your own data
+  python main.py --data my_info.json --resume my_resume.pdf
+		""",
+    )
+    parser.add_argument(
+        "--data",
+        default="applicant_data.json",
+        help="Path to applicant data JSON file (default: applicant_data.json)",
+    )
+    parser.add_argument(
+        "--resume", required=True, help="Path to resume/CV file (PDF format)"
+    )
+
+    args = parser.parse_args()
+
+    asyncio.run(main(args.data, args.resume))
