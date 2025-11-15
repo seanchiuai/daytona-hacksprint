@@ -9,8 +9,10 @@
  */
 
 import type * as actions_findColleges from "../actions/findColleges.js";
+import type * as mutations_savedColleges from "../mutations/savedColleges.js";
 import type * as mutations_searchResults from "../mutations/searchResults.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as queries_savedColleges from "../queries/savedColleges.js";
 import type * as queries_searchResults from "../queries/searchResults.js";
 import type * as studentProfile from "../studentProfile.js";
 import type * as todos from "../todos.js";
@@ -23,8 +25,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "actions/findColleges": typeof actions_findColleges;
+  "mutations/savedColleges": typeof mutations_savedColleges;
   "mutations/searchResults": typeof mutations_searchResults;
   myFunctions: typeof myFunctions;
+  "queries/savedColleges": typeof queries_savedColleges;
   "queries/searchResults": typeof queries_searchResults;
   studentProfile: typeof studentProfile;
   todos: typeof todos;

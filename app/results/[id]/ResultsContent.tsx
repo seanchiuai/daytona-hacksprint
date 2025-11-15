@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
@@ -21,9 +22,55 @@ interface College {
 
 export default function ResultsContent({ searchResultId }: { searchResultId: Id<"searchResults"> }) {
   const router = useRouter();
+  const [savingCollegeId, setSavingCollegeId] = useState<string | null>(null);
+  const [savedStates, setSavedStates] = useState<Record<string, boolean>>({});
+
   const searchResult = useQuery(api.queries.searchResults.getSearchResultById, {
     searchResultId,
   });
+
+  const saveCollegeMutation = useMutation(api.mutations.savedColleges.saveCollege);
+
+  const handleSaveCollege = async (college: College) => {
+    setSavingCollegeId(college.id);
+    try {
+      // Build the mutation args, only including optional fields if they have values
+      const args: any = {
+        collegeId: String(college.id), // Convert to string to match validator
+        name: college.name,
+        city: college.city,
+        state: college.state,
+        tuitionInState: college.tuitionInState,
+      };
+
+      // Only add optional fields if they're not null/undefined
+      if (college.tuitionInState != null) {
+        args.tuitionOutOfState = college.tuitionInState;
+      }
+      if (college.admissionRate != null) {
+        args.admissionRate = college.admissionRate;
+      }
+      if (college.avgSAT != null) {
+        args.avgSAT = college.avgSAT;
+      }
+      if (college.avgACT != null) {
+        args.avgACT = college.avgACT;
+      }
+      if (college.studentSize != null) {
+        args.studentSize = college.studentSize;
+      }
+      if (college.url != null) {
+        args.url = college.url;
+      }
+
+      await saveCollegeMutation(args);
+      setSavedStates((prev) => ({ ...prev, [college.id]: true }));
+    } catch (error) {
+      console.error("Failed to save college:", error);
+    } finally {
+      setSavingCollegeId(null);
+    }
+  };
 
   if (searchResult === undefined) {
     return (
@@ -128,8 +175,8 @@ export default function ResultsContent({ searchResultId }: { searchResultId: Id<
               )}
             </div>
 
-            {college.url && (
-              <div className="mt-4">
+            <div className="mt-4 flex items-center justify-between gap-3">
+              {college.url && (
                 <a
                   href={college.url}
                   target="_blank"
@@ -138,8 +185,22 @@ export default function ResultsContent({ searchResultId }: { searchResultId: Id<
                 >
                   Visit Website →
                 </a>
-              </div>
-            )}
+              )}
+              <Button
+                onClick={() => handleSaveCollege(college)}
+                disabled={savingCollegeId === college.id || savedStates[college.id]}
+                variant={savedStates[college.id] ? "default" : "outline"}
+                size="sm"
+              >
+                {savingCollegeId === college.id ? (
+                  "Saving..."
+                ) : savedStates[college.id] ? (
+                  "Saved"
+                ) : (
+                  "Save College"
+                )}
+              </Button>
+            </div>
           </div>
         ))}
       </div>

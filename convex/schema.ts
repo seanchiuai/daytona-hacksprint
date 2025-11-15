@@ -58,4 +58,23 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_profile", ["profileId"]),
+
+  savedColleges: defineTable({
+    userId: v.id("users"),
+    collegeId: v.string(), // College Scorecard ID
+    name: v.string(), // Using 'name' to match existing data
+    city: v.string(),
+    state: v.string(),
+    tuitionInState: v.number(),
+    tuitionOutOfState: v.optional(v.number()),
+    admissionRate: v.optional(v.number()),
+    avgSAT: v.optional(v.number()),
+    avgACT: v.optional(v.number()),
+    studentSize: v.optional(v.number()),
+    url: v.optional(v.string()),
+    // Metadata
+    savedAt: v.number(), // Using 'savedAt' to match existing data
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_college", ["userId", "collegeId"]),
 });
