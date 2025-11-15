@@ -11,8 +11,8 @@ export const saveProfile = mutation({
       sat: v.optional(v.number()),
       act: v.optional(v.number()),
     }),
-    locationPreferences: v.array(v.string()),
-    extracurriculars: v.array(v.string()),
+    locationPreferences: v.optional(v.array(v.string())),
+    extracurriculars: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     // Get authenticated user
@@ -43,10 +43,16 @@ export const saveProfile = mutation({
 
     const timestamp = Date.now();
 
+    const normalized = {
+      ...args,
+      locationPreferences: args.locationPreferences ?? [],
+      extracurriculars: args.extracurriculars ?? [],
+    };
+
     if (existingProfile) {
       // Update existing profile
       await ctx.db.patch(existingProfile._id, {
-        ...args,
+        ...normalized,
         updatedAt: timestamp,
       });
       return existingProfile._id;
@@ -54,7 +60,7 @@ export const saveProfile = mutation({
       // Create new profile
       const profileId = await ctx.db.insert("studentProfiles", {
         userId: user._id,
-        ...args,
+        ...normalized,
         createdAt: timestamp,
         updatedAt: timestamp,
       });
