@@ -59,9 +59,9 @@ export default function ResultsContent({ searchResultId }: { searchResultId: Id<
       <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
         <h3 className="font-semibold mb-2">Search Criteria:</h3>
         <p className="text-sm text-gray-700">
-          Budget: ${searchFilters.budget.toLocaleString()}/year |
-          Major: {searchFilters.major} |
-          Locations: {searchFilters.states.join(", ") || "All states"}
+          Budget: ${searchFilters?.budget?.toLocaleString() || 'N/A'}/year |
+          Major: {searchFilters?.major || 'N/A'} |
+          Locations: {searchFilters?.states?.join(", ") || "All states"}
         </p>
       </div>
 

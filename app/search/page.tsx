@@ -10,6 +10,16 @@ export default function SearchPage() {
   const router = useRouter();
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState<{
+    success: boolean;
+    exitCode?: number;
+    stdout?: string;
+    stderr?: string;
+    python?: string;
+    depsReady?: boolean;
+    bootstrapLog?: string;
+  } | null>(null);
 
   const profile = useQuery(api.studentProfile.getProfile);
   const findColleges = useAction(api.actions.findColleges.findColleges);
@@ -36,6 +46,58 @@ export default function SearchPage() {
       setError(errorMessage);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleApplyTest = async () => {
+    setIsApplying(true);
+    setApplyResult(null);
+    setError(null);
+
+    try {
+      // Minimal test applicant data
+      const applicantInfo = {
+        first_name: "Test",
+        last_name: "Student",
+        email: "test.student@example.com",
+        phone: "555-555-5555",
+        address: "123 Main St",
+        city: "Springfield",
+        country: "United States",
+        postal_code: "12345",
+        age: "18",
+        gpa: "3.8",
+        sat: "1450",
+        act: "32",
+        extracurriculars: ["Robotics", "Soccer"],
+        honors: ["National Merit Commended"],
+        intended_major: "Computer Science",
+      };
+
+      // Create a small dummy PDF-like blob for testing
+      const pdfHeader = "%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n1 0 obj <<>> endobj\n";
+      const blob = new Blob([pdfHeader, "Test resume content"], { type: "application/pdf" });
+      const file = new File([blob], "resume.pdf", { type: "application/pdf" });
+
+      const form = new FormData();
+      form.append("applicantInfo", JSON.stringify(applicantInfo));
+      form.append("resume", file);
+
+      const res = await fetch("/api/scholarship/apply", {
+        method: "POST",
+        body: form,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to trigger application");
+      }
+      setApplyResult(data);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to start application";
+      setError(msg);
+    } finally {
+      setIsApplying(false);
     }
   };
 
@@ -81,26 +143,86 @@ export default function SearchPage() {
         </div>
       )}
 
-      <Button
-        onClick={handleSearch}
-        disabled={isSearching}
-        className="w-full"
-        size="lg"
-      >
-        {isSearching ? (
-          <>
-            <span className="animate-spin mr-2">⏳</span>
-            Finding colleges... This may take a few seconds
-          </>
-        ) : (
-          "Find Colleges"
-        )}
-      </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Button
+          onClick={handleSearch}
+          disabled={isSearching}
+          className="w-full"
+          size="lg"
+        >
+          {isSearching ? (
+            <>
+              <span className="animate-spin mr-2">⏳</span>
+              Finding colleges... This may take 10-20 seconds
+            </>
+          ) : (
+            "Find Colleges"
+          )}
+        </Button>
+
+        <Button
+          onClick={handleApplyTest}
+          disabled={isApplying}
+          variant="outline"
+          className="w-full"
+          size="lg"
+        >
+          {isApplying ? (
+            <>
+              <span className="animate-spin mr-2">🚀</span>
+              Applying (test)...
+            </>
+          ) : (
+            "Apply (Test)"
+          )}
+        </Button>
+      </div>
 
       {isSearching && (
         <div className="mt-6 text-center text-sm text-gray-600 space-y-2">
           <p>🔍 Searching College Scorecard database...</p>
-          <p>📊 Sorting by selectivity...</p>
+          <p>🤖 AI is analyzing matches...</p>
+          <p>📊 Ranking by affordability...</p>
+        </div>
+      )}
+
+      {applyResult && (
+        <div className="mt-6 p-4 rounded-lg border bg-gray-50 text-sm">
+          <p className={applyResult.success ? "text-green-700" : "text-red-700"}>
+            {applyResult.success ? "Application process started successfully." : "Application process failed to start."}
+          </p>
+          {(applyResult.python || applyResult.depsReady !== undefined) && (
+            <div className="mt-2 text-gray-700">
+              {applyResult.python && <p>Python: {applyResult.python}</p>}
+              {applyResult.depsReady !== undefined && (
+                <p>Dependencies ready: {applyResult.depsReady ? "yes" : "no"}</p>
+              )}
+            </div>
+          )}
+          {applyResult.bootstrapLog && (
+            <details className="mt-2">
+              <summary className="cursor-pointer">Setup log</summary>
+              <pre className="whitespace-pre-wrap text-xs mt-2 max-h-64 overflow-auto">
+                {applyResult.bootstrapLog}
+              </pre>
+            </details>
+          )}
+          {applyResult.stdout && (
+            <details className="mt-2">
+              <summary className="cursor-pointer">Show output</summary>
+              <pre className="whitespace-pre-wrap text-xs mt-2 max-h-64 overflow-auto">
+                {applyResult.stdout.slice(0, 2000)}
+              </pre>
+            </details>
+          )}
+          {applyResult.stderr && (
+            <details className="mt-2">
+              <summary className="cursor-pointer">Show errors</summary>
+              <pre className="whitespace-pre-wrap text-xs mt-2 max-h-64 overflow-auto text-red-700">
+                {applyResult.stderr.slice(0, 2000)}
+              </pre>
+            </details>
+          )}
         </div>
       )}
     </div>
