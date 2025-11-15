@@ -1,0 +1,276 @@
+{
+  "projectOverview": {
+    "productName": "College Finance Planner",
+    "description": "A web application that helps students manage the finances of going to college by matching their budget, income, and academic profile with suitable colleges. The app uses AI to analyze college data and provide personalized recommendations prioritizing affordability.",
+    "targetAudience": "College-bound students seeking affordable higher education options that match their financial constraints and academic qualifications"
+  },
+  "purposeAndGoals": {
+    "problemStatement": "Students struggle to find colleges that fit their financial situation while also matching their academic profile and preferences. Researching colleges, comparing costs, and understanding financial fit is time-consuming and overwhelming.",
+    "solution": "An AI-powered web app that takes student information (budget, income, GPA, test scores, major, location preferences, extracurriculars) and automatically searches the College Scorecard database and web to find suitable colleges. Claude AI ranks colleges with cost as the top priority and provides personalized analysis.",
+    "keyObjectives": [
+      "Simplify college search by automating the research process",
+      "Prioritize affordability while considering academic and personal fit",
+      "Provide AI-powered insights to help students make informed decisions",
+      "Create a fast, user-friendly experience for students"
+    ]
+  },
+  "userPersonasAndUseCases": {
+    "primaryPersona": {
+      "description": "College-bound high school senior or transfer student who is cost-conscious and needs help finding affordable colleges that match their academic profile and preferences",
+      "useCases": [
+        "Student inputs their financial information (budget, family income) and academic credentials (GPA, test scores, major interest)",
+        "Student specifies location preferences and shares extracurricular activities",
+        "Student clicks 'Find Colleges' and receives AI-ranked list of colleges prioritizing cost",
+        "Student reviews college recommendations with key info (tuition, location, vibe) and AI analysis explaining the fit",
+        "Student uses insights to create their college application list"
+      ]
+    }
+  },
+  "techStack": {
+    "frontend": {
+      "technology": "Next.js 15 with App Router, TypeScript, Tailwind CSS 4 with shadcn/ui components",
+      "reasoning": "Already in use. Next.js 15 App Router provides excellent developer experience with server and client components, perfect for multi-step forms and integrating with Convex backend. TypeScript ensures type safety throughout.",
+      "prosForThisProject": [
+        "Seamless integration with Convex via ConvexClientProvider",
+        "Server components for fast initial loads, client components for interactive forms",
+        "Built-in routing makes multi-step form navigation simple",
+        "shadcn/ui provides ready-made, accessible form components",
+        "Large community and extensive documentation",
+        "TypeScript support throughout the stack"
+      ],
+      "consForThisProject": [
+        "Slight learning curve with App Router patterns if new to it",
+        "More complex than needed for simple app, but already established"
+      ]
+    },
+    "backend": {
+      "technology": "Convex (serverless functions and real-time database)",
+      "reasoning": "Already in use. Convex provides serverless functions (actions) that are perfect for making external API calls to both College Scorecard and Claude. No separate backend infrastructure needed.",
+      "prosForThisProject": [
+        "Convex Actions ideal for orchestrating College Scorecard API and Claude API calls",
+        "Real-time database with automatic TypeScript types",
+        "No separate backend to manage - all logic in /convex folder",
+        "Built-in scheduler if you need async processing later",
+        "Free tier generous enough for 10 users",
+        "Excellent developer experience with type-safe queries and mutations"
+      ],
+      "consForThisProject": [
+        "Claude API calls consume action runtime, but fine for 10 users",
+        "Need to understand queries vs mutations vs actions pattern",
+        "Actions with external APIs can't be called synchronously from mutations"
+      ]
+    },
+    "database": {
+      "technology": "Convex (included with backend)",
+      "reasoning": "Convex includes a built-in NoSQL database with automatic indexes, perfect for storing user profiles, student data, and search results",
+      "prosForThisProject": [
+        "Integrated with backend - no separate database setup",
+        "Real-time subscriptions for live updates",
+        "Automatic TypeScript types from schema",
+        "Simple query/mutation API",
+        "Great for storing user profiles and search results"
+      ],
+      "consForThisProject": [
+        "NoSQL might be unfamiliar if coming from SQL background",
+        "Less flexible than traditional databases for complex queries"
+      ]
+    },
+    "authentication": {
+      "technology": "Clerk",
+      "reasoning": "Already in use. Clerk provides plug-and-play authentication with official Convex integration, handling user management and auth flows professionally.",
+      "prosForThisProject": [
+        "Official Convex + Clerk integration works seamlessly",
+        "User profiles and sessions managed automatically",
+        "No backend auth code needed",
+        "Professional auth UI out of the box",
+        "Social login options (Google, GitHub) available",
+        "Free tier covers 10,000 monthly active users"
+      ],
+      "consForThisProject": [
+        "Might be overkill for simple MVP, but already established",
+        "External dependency for critical feature"
+      ]
+    },
+    "hosting": {
+      "technology": "Vercel (for Next.js) + Convex Cloud (for backend)",
+      "reasoning": "Next.js 15 deploys seamlessly to Vercel (same company). Convex hosts the backend. Together they provide instant deployments and excellent performance.",
+      "prosForThisProject": [
+        "Vercel designed for Next.js - zero configuration deployment",
+        "Automatic HTTPS, CDN, and edge caching",
+        "Git integration for automatic deployments",
+        "Generous free tier for small projects",
+        "Convex backend deploys automatically with npx convex deploy"
+      ],
+      "consForThisProject": [
+        "Vendor lock-in to Vercel + Convex ecosystem",
+        "Costs can increase with scale, but fine for 10 users"
+      ]
+    },
+    "additionalTools": [
+      {
+        "category": "AI/LLM",
+        "technology": "Anthropic Claude API (claude-sonnet-4-20250514)",
+        "reasoning": "Claude Sonnet 4 provides state-of-the-art reasoning capabilities to analyze college data, understand student profiles, and generate personalized rankings with cost as priority. Called from Convex actions using @anthropic-ai/sdk."
+      },
+      {
+        "category": "External Data API",
+        "technology": "College Scorecard API",
+        "reasoning": "Official U.S. Department of Education API providing comprehensive college data including tuition costs, admission stats, programs offered, and more. Free to use with 1,000 requests/hour limit (more than enough for MVP)."
+      },
+      {
+        "category": "UI Components",
+        "technology": "shadcn/ui",
+        "reasoning": "Already in use. Provides accessible, customizable React components built on Radix UI and styled with Tailwind CSS. Perfect for building multi-step forms quickly."
+      }
+    ]
+  },
+  "features": {
+    "mvpFeatures": [
+      {
+        "name": "Student Profile Creation",
+        "description": "Multi-step form where users input their financial information (budget, income), academic credentials (GPA, test scores, major), location preferences, and extracurricular activities. Data saved to Convex database.",
+        "priority": "must-have"
+      },
+      {
+        "name": "LLM-Powered College Matching",
+        "description": "When user clicks 'Find Colleges', a Convex action fetches relevant colleges from College Scorecard API based on filters (budget, major, location), then sends data to Claude API. Claude analyzes and ranks ALL matching colleges with cost as top priority, providing personalized insights on fit.",
+        "priority": "must-have"
+      },
+      {
+        "name": "Results Display",
+        "description": "Display ranked list of colleges with key information for each: college name, location, tuition cost, vibe/characteristics, and AI-generated analysis explaining why it's a good fit. List shows all matching colleges in ranked order.",
+        "priority": "must-have"
+      }
+    ],
+    "niceToHaveFeatures": [
+      {
+        "name": "Save/Bookmark Colleges",
+        "description": "Allow users to save specific colleges they're interested in for later review",
+        "priority": "nice-to-have"
+      },
+      {
+        "name": "Search History",
+        "description": "Let users view their past searches and compare different search results",
+        "priority": "nice-to-have"
+      },
+      {
+        "name": "Export Results",
+        "description": "Download college list as PDF or spreadsheet",
+        "priority": "nice-to-have"
+      },
+      {
+        "name": "Scholarship Integration",
+        "description": "Add scholarship discovery to help students find additional financial aid",
+        "priority": "nice-to-have"
+      }
+    ],
+    "outOfScope": [
+      "Scholarship search functionality (deferred to v2)",
+      "Sharing results with parents/counselors",
+      "Mobile app (web-only for MVP)",
+      "College comparison side-by-side view",
+      "Application deadline tracking",
+      "Financial aid calculator"
+    ]
+  },
+  "technicalArchitecture": {
+    "systemDesign": "Three-tier architecture: (1) Next.js frontend with multi-step form using client components, (2) Convex backend with serverless actions for API orchestration and database for persistence, (3) External APIs (College Scorecard for data, Claude for AI analysis). User authentication via Clerk. Data flow: User submits form → Data saved to Convex → User triggers search → Convex action calls College Scorecard API → Convex action calls Claude API with college data and student profile → Claude returns ranked analysis → Results saved to Convex → Frontend displays results via real-time subscription.",
+    "dataModels": [
+      {
+        "modelName": "users",
+        "fields": [
+          "clerkId (string, indexed) - Clerk user ID for auth",
+          "email (string) - User email from Clerk"
+        ]
+      },
+      {
+        "modelName": "studentProfiles",
+        "fields": [
+          "userId (reference to users, indexed) - Profile owner",
+          "budget (number) - Maximum annual budget",
+          "income (number) - Family income",
+          "major (string) - Intended major/field of study",
+          "gpa (number) - Student GPA",
+          "testScores (object) - SAT/ACT scores",
+          "testScores.sat (optional number) - SAT score if provided",
+          "testScores.act (optional number) - ACT score if provided",
+          "locationPreferences (array of strings) - Preferred states/regions",
+          "extracurriculars (array of strings) - Activities and interests"
+        ]
+      },
+      {
+        "modelName": "searchResults",
+        "fields": [
+          "userId (reference to users, indexed) - Search owner",
+          "profileId (reference to studentProfiles) - Profile used for search",
+          "colleges (array) - Ranked college data from APIs",
+          "claudeAnalysis (string) - AI-generated insights and rankings",
+          "createdAt (number) - Timestamp of search"
+        ]
+      }
+    ],
+    "apiStructure": "Convex provides type-safe queries, mutations, and actions. Key functions: (1) queries.getProfile - fetch user's student profile, (2) queries.getSearchResults - fetch past search results, (3) mutations.saveProfile - save/update student profile, (4) actions.findColleges - orchestrate College Scorecard API call, Claude API call, and save results. Actions use 'use node' directive to access Node.js APIs and Anthropic SDK.",
+    "thirdPartyIntegrations": [
+      "Clerk (authentication) - webhook integration with Convex for user sync",
+      "College Scorecard API - RESTful API, fetch colleges filtered by budget/major/location, returns JSON with tuition, admission stats, programs",
+      "Anthropic Claude API - REST API via @anthropic-ai/sdk, send student profile + college data, receive ranked analysis with cost priority"
+    ]
+  },
+  "uiUxConsiderations": {
+    "designApproach": "Clean, minimalist interface focused on ease of use. Desktop-first design (mobile responsive not priority for MVP). Use shadcn/ui components for consistency and accessibility. Multi-step form with clear progress indication. Results page shows ranked list with expandable cards for each college.",
+    "keyUserFlows": [
+      "Sign up/Login → Clerk auth flow → Redirect to dashboard",
+      "Create Profile → Multi-step form (Step 1: Financial info, Step 2: Academic info, Step 3: Preferences) → Save to Convex → Confirmation",
+      "Find Colleges → Click search button → Loading state with progress indicator → Results page with ranked college list",
+      "View Results → Scrollable list of college cards → Click card to expand for details and AI analysis → Read insights"
+    ],
+    "styleGuidelines": "Use Tailwind CSS with shadcn/ui default theme. Neutral color palette (grays with blue accents). Typography: Inter or similar sans-serif font. Forms: clear labels, helpful placeholder text, validation messages. Cards: white backgrounds with subtle shadows, hover states for interactivity. Loading states: skeleton screens or spinners. Responsive breakpoints: focus on desktop (1024px+), basic mobile support (640px+)."
+  },
+  "implementationGuidance": {
+    "setupSteps": [
+      "Initialize Next.js 15 project with TypeScript, Tailwind CSS (already done)",
+      "Install dependencies: npm install @anthropic-ai/sdk",
+      "Set up Convex: npx convex dev (already done)",
+      "Configure Clerk with Convex following official integration guide (already done)",
+      "Get College Scorecard API key from https://collegescorecard.ed.gov/data/api-documentation/",
+      "Get Anthropic API key from console.anthropic.com",
+      "Add environment variables to .env.local and Convex dashboard",
+      "Define Convex schema in convex/schema.ts with users, studentProfiles, searchResults tables",
+      "Create Convex functions: queries for data fetching, mutations for saving profiles, actions for API calls",
+      "Build multi-step form components using shadcn/ui Form, Input, Select components",
+      "Create results display page with college cards and AI analysis",
+      "Test end-to-end flow with real API calls",
+      "Deploy to Vercel: git push → automatic deployment"
+    ],
+    "criticalTechnicalNotes": [
+      "Convex actions that call external APIs must use 'use node' directive at top of file",
+      "Rate limits: College Scorecard API allows 1,000 requests/hour - cache results to avoid hitting limit",
+      "Claude API costs per token - estimate ~$0.01-0.05 per search depending on data size",
+      "For 10 users with ~3 searches each = ~30 searches = ~$0.30-1.50 in Claude costs",
+      "Use Convex scheduler if Claude API calls take too long - schedule action to run asynchronously",
+      "Implement error handling for API failures (College Scorecard down, Claude rate limit, etc.)",
+      "Store Claude API responses in database to avoid re-calling for same search",
+      "Use TypeScript types generated by Convex for type safety across frontend/backend",
+      "Test with real student data to tune Claude prompts for best ranking results"
+    ],
+    "securityConsiderations": [
+      "Never expose API keys in client code - all external API calls happen in Convex actions",
+      "Clerk handles auth tokens and session management securely",
+      "Environment variables stored in Convex dashboard (not in code)",
+      "Validate all user inputs on backend (Convex validators)",
+      "Implement rate limiting on actions to prevent abuse",
+      "Consider privacy: don't log sensitive student data in production logs"
+    ]
+  },
+  "estimatedTimeline": {
+    "totalEstimate": "4-6 hours for MVP with existing tech stack",
+    "breakdown": [
+      "Environment setup and API keys: 30 minutes",
+      "Convex schema and functions: 1 hour",
+      "Multi-step form UI: 1.5 hours",
+      "Claude + College Scorecard integration: 1.5 hours",
+      "Results display page: 1 hour",
+      "Testing and bug fixes: 30 minutes"
+    ]
+  }
+}
