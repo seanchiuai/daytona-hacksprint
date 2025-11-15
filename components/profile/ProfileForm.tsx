@@ -70,8 +70,8 @@ export default function ProfileForm() {
           sat: formData.sat,
           act: formData.act,
         },
-        locationPreferences: formData.states!,
-        extracurriculars: formData.extracurriculars!,
+        locationPreferences: formData.states || [],
+        extracurriculars: formData.extracurriculars || [],
       });
 
       toast.success("Profile saved successfully!");
