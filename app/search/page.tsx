@@ -90,7 +90,7 @@ export default function SearchPage() {
         {isSearching ? (
           <>
             <span className="animate-spin mr-2">⏳</span>
-            Finding colleges... This may take 10-20 seconds
+            Finding colleges... This may take a few seconds
           </>
         ) : (
           "Find Colleges"
@@ -100,8 +100,7 @@ export default function SearchPage() {
       {isSearching && (
         <div className="mt-6 text-center text-sm text-gray-600 space-y-2">
           <p>🔍 Searching College Scorecard database...</p>
-          <p>🤖 AI is analyzing matches...</p>
-          <p>📊 Ranking by affordability...</p>
+          <p>📊 Sorting by selectivity...</p>
         </div>
       )}
     </div>

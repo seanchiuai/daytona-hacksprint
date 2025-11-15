@@ -17,10 +17,6 @@ interface College {
   avgACT?: number;
   studentSize: number;
   url: string;
-  rank: number;
-  costRating: "Excellent" | "Good" | "Fair";
-  fitScore: number;
-  analysis: string;
 }
 
 export default function ResultsContent({ searchResultId }: { searchResultId: Id<"searchResults"> }) {
@@ -49,12 +45,12 @@ export default function ResultsContent({ searchResultId }: { searchResultId: Id<
     );
   }
 
-  const { rankedColleges, searchFilters } = searchResult;
+  const { colleges, searchFilters } = searchResult;
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Your Personalized College Matches</h1>
+        <h1 className="text-3xl font-bold">Your College Matches</h1>
         <Button onClick={() => router.push("/search")} variant="outline">
           New Search
         </Button>
@@ -71,12 +67,12 @@ export default function ResultsContent({ searchResultId }: { searchResultId: Id<
 
       <div className="mb-4">
         <p className="text-gray-600">
-          Found {rankedColleges.length} colleges ranked by affordability and fit
+          Found {colleges.length} colleges sorted by selectivity (most competitive first)
         </p>
       </div>
 
       <div className="space-y-4">
-        {rankedColleges.map((college: College) => (
+        {colleges.map((college: College, index: number) => (
           <div
             key={college.id}
             className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow"
@@ -84,7 +80,7 @@ export default function ResultsContent({ searchResultId }: { searchResultId: Id<
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">
-                  #{college.rank}
+                  #{index + 1}
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">{college.name}</h3>
@@ -100,25 +96,6 @@ export default function ResultsContent({ searchResultId }: { searchResultId: Id<
                 <p className="text-sm text-gray-600">per year</p>
               </div>
             </div>
-
-            <div className="flex gap-4 mb-3">
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  college.costRating === "Excellent"
-                    ? "bg-green-100 text-green-800"
-                    : college.costRating === "Good"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}
-              >
-                {college.costRating} Value
-              </span>
-              <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold">
-                Fit Score: {college.fitScore}/100
-              </span>
-            </div>
-
-            <p className="text-gray-700 mb-4">{college.analysis}</p>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               {college.admissionRate && (
@@ -167,7 +144,7 @@ export default function ResultsContent({ searchResultId }: { searchResultId: Id<
         ))}
       </div>
 
-      {rankedColleges.length === 0 && (
+      {colleges.length === 0 && (
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">
             No colleges found matching your criteria.

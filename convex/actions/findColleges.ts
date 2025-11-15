@@ -3,7 +3,6 @@
 import { action } from "../_generated/server";
 import { api } from "../_generated/api";
 import { v } from "convex/values";
-import Anthropic from "@anthropic-ai/sdk";
 
 // Types
 interface College {
@@ -18,13 +17,6 @@ interface College {
   avgACT: number;
   studentSize: number;
   url: string;
-}
-
-interface RankedCollege extends College {
-  rank: number;
-  costRating: string;
-  fitScore: number;
-  analysis: string;
 }
 
 export const findColleges = action({
@@ -57,19 +49,13 @@ export const findColleges = action({
 
     console.log(`Found ${colleges.length} matching colleges`);
 
-    // 3. Send to Claude for AI analysis and ranking
-    console.log("Analyzing colleges with Claude AI...");
-    const aiAnalysis = await analyzeWithClaude(profile, colleges);
-
-    // 4. Save results to database
+    // 3. Save results to database
     const searchResultId = await ctx.runMutation(
       api.mutations.searchResults.saveSearchResult,
       {
         userId: profile.userId,
         profileId: args.profileId,
         colleges: colleges,
-        claudeAnalysis: aiAnalysis.fullAnalysis,
-        rankedColleges: aiAnalysis.rankedColleges,
         searchFilters: {
           budget: profile.budget,
           states: profile.locationPreferences,
@@ -119,7 +105,7 @@ async function fetchCollegesFromScorecard(filters: {
     "latest.student.size__range": "1..", // Must have at least 1 student
     per_page: "100",
     page: "0",
-    _sort: "latest.cost.tuition.in_state:asc",
+    _sort: "latest.admissions.admission_rate.overall:asc",
   });
 
   // Add state filter if provided
@@ -243,210 +229,5 @@ async function fetchCollegesFromScorecard(filters: {
     console.error("Error:", error);
     console.error("=".repeat(80) + "\n");
     throw new Error("Could not retrieve college data. Please try again later.");
-  }
-}
-
-// Helper: Analyze with Claude API
-async function analyzeWithClaude(
-  profile: any,
-  colleges: College[]
-): Promise<{
-  fullAnalysis: string;
-  rankedColleges: RankedCollege[];
-}> {
-  const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  });
-
-  // Build prompt
-  const prompt = `You are an expert college advisor helping students find affordable colleges that match their profile.
-
-STUDENT PROFILE:
-- Budget: $${profile.budget.toLocaleString()}/year (maximum)
-- Family Income: $${profile.income.toLocaleString()}/year
-- GPA: ${profile.gpa}
-- Test Scores: ${profile.testScores.sat ? `SAT ${profile.testScores.sat}` : ""} ${profile.testScores.act ? `ACT ${profile.testScores.act}` : ""}
-- Intended Major: ${profile.major}
-- Location Preferences: ${profile.locationPreferences.join(", ")}
-- Extracurriculars: ${profile.extracurriculars.join(", ")}
-
-COLLEGES TO ANALYZE (${colleges.length} total):
-${JSON.stringify(colleges, null, 2)}
-
-TASK:
-Rank ALL ${colleges.length} colleges with COST as the #1 priority. For each college:
-
-1. Assign a rank (1 = best fit, ${colleges.length} = worst fit)
-2. Provide a cost rating: "Excellent" (under 50% of budget), "Good" (50-75%), "Fair" (75-100%)
-3. Calculate a fit score (0-100) based on:
-   - Cost (50% weight) - most important
-   - Academic match (25% weight) - admission likelihood based on GPA/test scores
-   - Location preference (15% weight)
-   - Program/major fit (10% weight)
-4. Write a 2-3 sentence analysis explaining why this college is a good or poor fit
-
-Return your response as a valid JSON array:
-
-[
-  {
-    "id": "college_id",
-    "rank": 1,
-    "costRating": "Excellent",
-    "fitScore": 92,
-    "analysis": "This college is an outstanding choice because..."
-  },
-  ...
-]
-
-IMPORTANT:
-- Prioritize affordability above all else
-- Be honest about admission chances
-- Include ALL ${colleges.length} colleges in your ranking
-- Return ONLY the JSON array, no other text`;
-
-  // ========== DEBUGGING LOGS ==========
-  console.log("\n" + "=".repeat(80));
-  console.log("🤖 CLAUDE API REQUEST");
-  console.log("=".repeat(80));
-  console.log("\n📝 SYSTEM PROMPT:");
-  console.log(prompt);
-  console.log("\n🔧 API CONFIG:");
-  console.log(JSON.stringify({
-    model: "claude-haiku-4-5",
-    max_tokens: 8192,
-    timestamp: new Date().toISOString(),
-  }, null, 2));
-  console.log("=".repeat(80) + "\n");
-
-  try {
-    console.log("⏳ Calling Claude API...\n");
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 8192,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
-
-    // ========== DEBUGGING LOGS ==========
-    console.log("\n" + "=".repeat(80));
-    console.log("✅ CLAUDE API RESPONSE");
-    console.log("=".repeat(80));
-    console.log("\n📊 RESPONSE METADATA:");
-    console.log(JSON.stringify({
-      id: message.id,
-      model: message.model,
-      role: message.role,
-      stop_reason: message.stop_reason,
-      usage: message.usage,
-    }, null, 2));
-    console.log("\n💬 RESPONSE CONTENT:");
-    console.log(JSON.stringify(message.content, null, 2));
-    console.log("=".repeat(80) + "\n");
-
-    // Extract text from content blocks
-    const textBlock = message.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new Error("No text content in Claude response");
-    }
-    const fullAnalysis = textBlock.text;
-
-    // Parse JSON response
-    let rankedColleges: RankedCollege[];
-    try {
-      console.log("🔄 Parsing Claude response JSON...\n");
-
-      // Extract JSON from response (Claude might wrap it in markdown)
-      const jsonMatch = fullAnalysis.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        console.error("\n❌ No JSON array found in Claude response");
-        console.error("Full response:", fullAnalysis.substring(0, 500));
-        throw new Error("No JSON array found in response");
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
-      console.log(`✅ Parsed ${parsed.length} ranked colleges\n`);
-
-      // Merge with original college data
-      rankedColleges = parsed.map((ranked: any) => {
-        const college = colleges.find((c) => c.id === ranked.id);
-        if (!college) {
-          throw new Error(`College ${ranked.id} not found in original data`);
-        }
-
-        return {
-          ...college,
-          rank: ranked.rank,
-          costRating: ranked.costRating,
-          fitScore: ranked.fitScore,
-          analysis: ranked.analysis,
-        };
-      });
-
-      // Sort by rank
-      rankedColleges.sort((a, b) => a.rank - b.rank);
-
-      console.log("✅ Successfully merged and ranked all colleges\n");
-    } catch (parseError) {
-      console.error("\n" + "=".repeat(80));
-      console.error("❌ CLAUDE RESPONSE PARSING FAILED");
-      console.error("=".repeat(80));
-      console.error("Parse Error:", parseError);
-      console.error("\nRaw Response (first 1000 chars):");
-      console.error(fullAnalysis.substring(0, 1000));
-      console.error("=".repeat(80) + "\n");
-      throw new Error(
-        "Failed to parse AI analysis. The response format was invalid."
-      );
-    }
-
-    console.log("=".repeat(80));
-    console.log("✅ CLAUDE ANALYSIS COMPLETE");
-    console.log("=".repeat(80) + "\n");
-
-    return {
-      fullAnalysis,
-      rankedColleges,
-    };
-  } catch (error: any) {
-    console.error("\n" + "=".repeat(80));
-    console.error("❌ CLAUDE API FAILED");
-    console.error("=".repeat(80));
-    console.error("Error Status:", error.status || "No status");
-    console.error("Error Message:", error.message || "No message");
-    console.error("Error Name:", error.name || "No name");
-    console.error("\nFull Error Object:");
-    console.error(JSON.stringify(error, null, 2));
-    console.error("\nError Stack:");
-    console.error(error.stack || "No stack trace");
-
-    if (error.status === 429) {
-      console.error("\n⚠️ Rate Limit Hit!");
-      console.error("=".repeat(80) + "\n");
-      throw new Error(
-        "AI service is temporarily busy. Please try again in a moment."
-      );
-    }
-    if (error.status === 401 || error.status === 403) {
-      console.error("\n⚠️ Authentication Issue!");
-      console.error("=".repeat(80) + "\n");
-      throw new Error("AI service authentication failed. Please contact support.");
-    }
-    if (error.error?.type === 'invalid_request_error') {
-      console.error("\n⚠️ Invalid Request!");
-      console.error("API Error Type:", error.error.type);
-      console.error("API Error Message:", error.error.message);
-      console.error("=".repeat(80) + "\n");
-      throw new Error(`Invalid API request: ${error.error.message}`);
-    }
-
-    console.error("\n⚠️ Unknown Error Type");
-    console.error("=".repeat(80) + "\n");
-
-    // Re-throw the original error message if available, otherwise use generic message
-    throw new Error(error.message || "Failed to analyze colleges. Please try again later.");
   }
 }

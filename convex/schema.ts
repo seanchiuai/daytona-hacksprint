@@ -46,11 +46,8 @@ export default defineSchema({
   searchResults: defineTable({
     userId: v.id("users"),
     profileId: v.id("studentProfiles"),
-    // Raw college data from College Scorecard
+    // College data from College Scorecard (sorted by admission rate)
     colleges: v.array(v.any()),
-    // AI analysis and rankings
-    claudeAnalysis: v.string(),
-    rankedColleges: v.array(v.any()),
     // Metadata
     createdAt: v.number(),
     searchFilters: v.object({

@@ -6,8 +6,6 @@ export const saveSearchResult = mutation({
     userId: v.id("users"),
     profileId: v.id("studentProfiles"),
     colleges: v.array(v.any()),
-    claudeAnalysis: v.string(),
-    rankedColleges: v.array(v.any()),
     searchFilters: v.object({
       budget: v.number(),
       states: v.array(v.string()),
@@ -19,8 +17,6 @@ export const saveSearchResult = mutation({
       userId: args.userId,
       profileId: args.profileId,
       colleges: args.colleges,
-      claudeAnalysis: args.claudeAnalysis,
-      rankedColleges: args.rankedColleges,
       searchFilters: args.searchFilters,
       createdAt: Date.now(),
     });
