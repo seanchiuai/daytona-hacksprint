@@ -8,7 +8,11 @@
  * @module
  */
 
+import type * as actions_findColleges from "../actions/findColleges.js";
+import type * as mutations_searchResults from "../mutations/searchResults.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as queries_searchResults from "../queries/searchResults.js";
+import type * as studentProfile from "../studentProfile.js";
 import type * as todos from "../todos.js";
 
 import type {
@@ -18,7 +22,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actions/findColleges": typeof actions_findColleges;
+  "mutations/searchResults": typeof mutations_searchResults;
   myFunctions: typeof myFunctions;
+  "queries/searchResults": typeof queries_searchResults;
+  studentProfile: typeof studentProfile;
   todos: typeof todos;
 }>;
 

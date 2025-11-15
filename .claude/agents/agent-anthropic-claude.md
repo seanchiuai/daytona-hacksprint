@@ -3,6 +3,7 @@ name: agent-anthropic-claude
 description: Expert in implementing Anthropic Claude API integrations in Convex actions. Use when adding AI-powered features like college ranking, personalized analysis, or intelligent recommendations. Ensures proper API usage, cost optimization, and error handling.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: inherit
+color: purple
 ---
 
 # Agent: Anthropic Claude API Integration

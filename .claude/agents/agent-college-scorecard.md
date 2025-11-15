@@ -3,6 +3,7 @@ name: agent-college-scorecard
 description: Expert in implementing College Scorecard API integration in Convex actions. Use when fetching college data including tuition costs, admission statistics, programs, and institutional information. Handles filtering, pagination, and rate limiting.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: inherit
+color: purple
 ---
 
 # Agent: College Scorecard API Integration
