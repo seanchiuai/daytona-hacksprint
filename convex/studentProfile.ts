@@ -19,13 +19,21 @@ export const saveProfile = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    // Find user in database
-    const user = await ctx.db
+    // Find or create user in database
+    let user = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .first();
 
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      // Create user if doesn't exist
+      const userId = await ctx.db.insert("users", {
+        clerkId: identity.subject,
+        email: identity.email || "",
+      });
+      user = await ctx.db.get(userId);
+      if (!user) throw new Error("Failed to create user");
+    }
 
     // Check if profile exists
     const existingProfile = await ctx.db
