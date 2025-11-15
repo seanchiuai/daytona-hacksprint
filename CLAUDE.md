@@ -1,62 +1,26 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Development guidelines for Claude Code when working with this repository.
 
-## Claude Code Instructions
+## Before Starting Any Task
+**IMPORTANT**: Always check these directories first:
+- **`/skills`** - Custom skills for specific actions
+- **`/agents`** - Custom agent personas to invoke via Task tool
+- **`/plans`** - Implementation plans for features
 
-### Subagents, Plans and Skills
-- **`/skills`** - contains the custom skills you can use to do specific things
-  - Before proceeding please check if there is a skill for the requested action
-- **`/agents`** - Contains custom agent personas
-  - Before implementing features, check if a relevant agent exists in this directory that can be invoked
-  - Invoke custom agents using the Task tool when their expertise matches the request
-  - If no matching agent exists, proceed with the task normally
-- **`/plans`** - Contains plans for implementing new features
-  - Usually called out to be used by an agent or user
-  - Before implementing features, check if a relevant plan exists in this directory
-  - If a user requests a feature with a plan, always reference and follow that plan
-  - If no matching plan exists, proceed with the implementation with your own plan
+## Quick Reference
 
-**IMPORTANT**: Always check these directories when starting a new feature or task. subagents, skills and plans provide project-specific expertise and tested approaches when available.
+### Commands
+- `npm run dev` - Start dev server (http://localhost:3000)
+- `npx convex deploy` - Deploy Convex functions
 
-## Commands
+### Tech Stack
+- **Frontend**: Next.js 15 (App Router), Tailwind CSS 4, shadcn/ui
+- **Backend**: Convex (schema: `convex/schema.ts`)
+- **Auth**: Clerk (middleware.ts protects routes)
+- **Path alias**: `@/*` → root directory
 
-### Development
-- `npm run dev` - Runs both Next.js frontend and Convex backend in parallel
-  - http://localhost:3000
-  - Convex dashboard opens automatically
-
-### Convex
-- `npx convex dev` - Start Convex development server (auto-started with `npm run dev`)
-- `npx convex deploy` - Deploy Convex functions to production
-
-## Architecture
-
-This is a full-stack TypeScript application using:
-
-### Frontend
-- **Next.js 15** with App Router - React framework with file-based routing in `/app`
-- **Tailwind CSS 4** - Utility-first styling with custom dark theme variables
-- **shadcn/ui** - Pre-configured component library
-- **Clerk** - Authentication provider integrated via `ClerkProvider` in app/layout.tsx
-
-### Backend
-- **Convex** - Real-time backend with:
-  - Database schema defined in `convex/schema.ts`
-  - Server functions in `convex/` directory (myFunctions.ts, todos.ts)
-  - Auth config in `convex/auth.config.ts` (requires Clerk JWT configuration)
-
-### Key Integration Points
-- **ConvexClientProvider** (components/ConvexClientProvider.tsx) wraps the app with `ConvexProviderWithClerk` to integrate Convex with Clerk auth
-- **Middleware** (middleware.ts) protects `/server` routes using Clerk
-- Path aliases configured: `@/*` maps to root directory
-
-### Clerk JWT Configuration
-1. Create a JWT template named "convex" in Clerk dashboard
-2. Set issuer domain in the template
-3. Add `CLERK_JWT_ISSUER_DOMAIN` environment variable in Convex dashboard
-
-## Project Structure
+### Project Structure
 - `/app` - Next.js pages and layouts (App Router)
   - `/app/(auth)` - Authentication pages if needed
   - `/app/(protected)` - Protected routes requiring authentication
@@ -67,66 +31,79 @@ This is a full-stack TypeScript application using:
 - `/public` - Static assets including custom fonts
 - `/agents` - Custom Claude Code agent definitions for specialized tasks
 - `/plans` - Implementation plans and guides for specific features
+- `/skills` - Custom skills for specific actions
 - `middleware.ts` - Route protection configuration
 
-## Key Architecture Patterns
-- Uses TypeScript with strict mode enabled
-- Path aliases configured with `@/*` mapping to root directory
-- Components follow React patterns with Tailwind CSS for styling
-- Real-time data synchronization with Convex
-- JWT-based authentication with Clerk
-- Custom hooks for framework integration
-- ESLint configuration for code quality
+## Development Patterns
 
-## Authentication & Security
-- Protected routes using Clerk's authentication in middleware.ts
-- User-specific data filtering at the database level in Convex
-- JWT tokens with Convex integration
-- ClerkProvider wraps the app in app/layout.tsx
-- ConvexClientProvider integrates Convex with Clerk auth
+### Documentation
+**IMPORTANT**: All Markdown files created for logging, recording, or instructing must be placed in the `/docs` folder.
+- This includes: implementation notes, feature documentation, troubleshooting guides, etc.
+- Keep documentation organized and discoverable
+- Never create documentation files in the root directory or scattered throughout the codebase
 
-## Backend Integration
-- Convex provides real-time database with TypeScript support
-- All mutations and queries are type-safe
-- Automatic optimistic updates and real-time sync
-- Row-level security ensures users only see their own data
-- Use `useQuery`, `useMutation`, and `useAction` hooks in Next.js components
+### Convex Backend
+**CRITICAL**: When working with Convex, ALWAYS follow `convexGuidelines.md`
+- Covers: queries, mutations, actions, validators, schema, indexes, file storage
+- Never deviate without explicit user approval
 
-## Styling Approach
-- Tailwind CSS 4 with custom dark theme variables
-- shadcn/ui component library for pre-built components
-- Responsive design with mobile-first approach
-- Consistent design system across the application
+### Code Organization
+- Break large pages into focused components
+- Extract reusable UI into separate files
+- Keep pages concise (avoid 1000+ line files)
+- Use hooks for logic separation
 
-## API Key Management
-When implementing features that require API keys:
-1. Ask the user to provide the API key
-2. Add the key to `.env.local` file yourself (create the file if it doesn't exist)
-4. Never ask the user to manually edit environment files - handle it for them
+### UI-First Approach
+1. Build complete UI with styling first
+2. Match existing design patterns
+3. Then add business logic and backend integration
 
-## Convex Backend Development
-**IMPORTANT**: When implementing any features or changes that involve Convex:
-- ALWAYS refer to and follow the guidelines in `convexGuidelines.md`
-- This file contains critical best practices for:
-  - Function syntax (queries, mutations, actions, internal functions)
-  - Validators and type safety
-  - Schema definitions and index usage
-  - File storage patterns
-  - Scheduling and cron jobs
-  - Database queries and performance optimization
-- Following these guidelines ensures type safety, proper security, and optimal performance
-- Never deviate from these patterns without explicit user approval
+### API Keys
+- Ask user for API key
+- Add to `.env.local` yourself (create if needed)
+- Never ask user to manually edit env files
 
-## Modular Code Best Practice
-**IMPORTANT**: Write modular, reusable code to optimize token usage and maintainability:
-- Break down large pages into smaller, focused components
-- Extract reusable UI elements into separate component files
-- Keep pages concise by delegating logic to components and hooks
-- Avoid pages that are thousands of lines long - this saves tokens and improves code quality
+### Auth & Security
+- Routes protected via Clerk middleware
+- User-specific filtering at Convex database level
+- Use `useQuery`, `useMutation`, `useAction` hooks
 
-## UI-First Implementation Approach
-**IMPORTANT**: When implementing new features or screens:
-1. **Build the UI first** - Create the complete visual interface with all elements, styling, and layout
-2. **Match existing design** - New designs should closely match the existing UI screens, pages, and components, unless otherwise stated by the user
-3. **Then add functionality** - After the UI is in place, implement the business logic, state management, and backend integration
-4. This approach ensures a clear separation of concerns and makes it easier to iterate on both design and functionality independently
+## Git & Version Control
+
+### Committing Changes
+**IMPORTANT**: Only create commits when explicitly requested by the user. If unclear, ask first.
+
+#### Git Safety Protocol
+- NEVER update git config
+- NEVER run destructive/irreversible commands (force push, hard reset) without explicit user request
+- NEVER skip hooks (--no-verify, --no-gpg-sign) without explicit user request
+- NEVER force push to main/master (warn user if they request it)
+- Avoid `git commit --amend` unless explicitly requested or adding pre-commit hook edits
+
+#### Commit Process
+1. Run git commands in parallel to gather context:
+   - `git status` - See untracked files
+   - `git diff` - See staged and unstaged changes
+   - `git log` - Review recent commit message style
+2. Analyze all changes and draft a commit message:
+   - Summarize nature of changes (new feature, enhancement, bug fix, refactor, etc.)
+   - Do not commit files with secrets (.env, credentials.json, etc.)
+   - Focus on "why" rather than "what"
+   - Keep concise (1-2 sentences)
+3. Add files and create commit with proper message format:
+   ```
+   [Summary message]
+
+   🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+   Co-Authored-By: Claude <noreply@anthropic.com>
+   ```
+4. Run `git status` after commit to verify success
+5. If pre-commit hooks modify files, verify it's safe to amend (check authorship and not pushed)
+
+#### Notes
+- Never use git commands with `-i` flag (interactive mode not supported)
+- Do not create empty commits
+- Always use HEREDOC for commit messages to ensure proper formatting
+- Do not push to remote unless explicitly requested
+- Always sacrifice grammar for the sake of conciseness.
