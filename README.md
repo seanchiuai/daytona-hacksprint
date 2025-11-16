@@ -1,3 +1,5 @@
+Demo: https://youtu.be/ZESGauyRmvA
+
 # Next.js + Convex + Clerk Starter Template
 
 A modern full-stack TypeScript starter template with authentication, real-time database, and beautiful UI components.
