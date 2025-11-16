@@ -50,6 +50,49 @@ def parse_user_context(context_path: str) -> dict:
     return context_info
 
 
+def parse_applicant_json(data_path: str) -> dict:
+    """
+    Parse applicant data from JSON file sent by the API.
+    """
+    import json
+
+    with open(data_path, 'r') as f:
+        data = json.load(f)
+
+    # Map the JSON data to the expected format
+    context_info = {
+        "email": data.get("email", ""),
+        "password": os.environ.get("COMMONAPP_PASSWORD", ""),
+        "first_name": data.get("first_name", ""),
+        "last_name": data.get("last_name", ""),
+        "age": data.get("age", "18"),
+        "colleges": data.get("colleges", ["Stanford University"]),
+        "first_generation": data.get("first_generation", False),
+        "honors_college": data.get("honors_college", False),
+        "application_term": data.get("application_term", "Fall 2026"),
+        "criminal_history": data.get("prison_history", False),
+        "academic_disciplinary_history": data.get("academic_disciplinary_history", False),
+        "legal_disciplinary_history": data.get("legal_disciplinary_history", False),
+        "military_service": data.get("military_service", False),
+        "military_relatives": data.get("military_relatives", False),
+        "citizenship_status": "US Citizen" if data.get("US_citizen") else ("US Permanent Resident" if data.get("permanent_resident") else "International"),
+        "has_green_card": data.get("permanent_resident", False),
+        "arts_portfolio": data.get("arts_portfolio", False),
+        "birth_country": data.get("birth_country", data.get("country", "United States")),
+        "birth_state": data.get("birth_state", data.get("state", "")),
+        "lived_outside_us": data.get("lived_outside_us", False),
+        "parents_attended_stanford": False,
+        "parents_employed_stanford": False,
+        "relatives_employed_stanford": False,
+        "parents_separate_address": data.get("parents_separate_address", False),
+        "siblings": data.get("siblings", 0),
+        "siblings_applying_to_college": data.get("siblings_applying_to_college", False),
+        "full_context": json.dumps(data, indent=2)
+    }
+
+    return context_info
+
+
 async def fill_common_app(context_info: dict):
     """
     Automate CommonApp login, college search, adding colleges, and filling out all forms.
@@ -163,21 +206,28 @@ YOU MUST COMPLETE ONE COLLEGE ENTIRELY BEFORE MOVING TO THE NEXT.
     return history.final_result()
 
 
-async def main(context_path: str):
-    # Verify context file exists
-    if not os.path.exists(context_path):
-        raise FileNotFoundError(f"User context file not found: {context_path}")
-
-    # Parse user context
-    context_info = parse_user_context(context_path)
+async def main(context_path: str = None, data_path: str = None, resume_path: str = None):
+    # Determine which parser to use
+    if data_path:
+        # Using JSON data from API
+        if not os.path.exists(data_path):
+            raise FileNotFoundError(f"Applicant data file not found: {data_path}")
+        context_info = parse_applicant_json(data_path)
+    else:
+        # Using legacy text context file
+        if not context_path or not os.path.exists(context_path):
+            raise FileNotFoundError(f"User context file not found: {context_path}")
+        context_info = parse_user_context(context_path)
 
     print(f"\n{'=' * 60}")
     print("Starting CommonApp Automation")
     print(f"{'=' * 60}")
     print(f"User: {context_info['first_name']} {context_info['last_name']}")
     print(f"Email: {context_info['email']}")
-    print(f"Colleges to apply: {', '.join(context_info['colleges'])}")
+    print(f"Colleges to apply: {', '.join(str(c) for c in context_info['colleges'])}")
     print(f"Application Term: {context_info['application_term']}")
+    if resume_path:
+        print(f"Resume: {resume_path}")
     print(f"{'=' * 60}\n")
 
     # Run the automation
@@ -202,14 +252,35 @@ Examples:
 
   # Use custom context file
   python main.py --context my_context.txt
+
+  # Use JSON data and resume (API mode)
+  python main.py --data applicant.json --resume resume.pdf
         """,
     )
     parser.add_argument(
         "--context",
-        default="user_context.txt",
         help="Path to user context file (default: user_context.txt)",
+        default=None,
+    )
+    parser.add_argument(
+        "--data",
+        help="Path to applicant data JSON file (for API usage)",
+        default=None,
+    )
+    parser.add_argument(
+        "--resume",
+        help="Path to resume PDF file (for API usage)",
+        default=None,
     )
 
     args = parser.parse_args()
 
-    asyncio.run(main(args.context))
+    # Default to user_context.txt if no arguments provided
+    if not args.data and not args.context:
+        args.context = "user_context.txt"
+
+    asyncio.run(main(
+        context_path=args.context,
+        data_path=args.data,
+        resume_path=args.resume
+    ))
